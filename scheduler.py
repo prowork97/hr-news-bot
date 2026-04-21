@@ -22,27 +22,24 @@ def start():
     init_db()
     scheduler = BlockingScheduler(timezone=TZ)
 
-    # Пн 09:00 — зарплаты
-    scheduler.add_job(run_salary_job, CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=TZ), id="salary_monday")
-    # Вт 09:00 — новость недели
-    scheduler.add_job(run_news_job, CronTrigger(day_of_week="tue", hour=9, minute=0, timezone=TZ), id="news_tuesday")
+    # Каждый день 09:00 — зарплатная аналитика (30 специализаций, бесконечный цикл)
+    scheduler.add_job(run_salary_job, CronTrigger(hour=9, minute=0, timezone=TZ), id="salary_daily")
+    # Вт 09:00 — новость недели (дополнительно к зарплатам)
+    scheduler.add_job(run_news_job, CronTrigger(day_of_week="tue", hour=10, minute=0, timezone=TZ), id="news_tuesday")
     # Ср 09:00 — HR tech инструмент
-    scheduler.add_job(run_hrtech_job, CronTrigger(day_of_week="wed", hour=9, minute=0, timezone=TZ), id="hrtech_wednesday")
-    # Чт 09:00 — зарплаты
-    scheduler.add_job(run_salary_job, CronTrigger(day_of_week="thu", hour=9, minute=0, timezone=TZ), id="salary_thursday")
+    scheduler.add_job(run_hrtech_job, CronTrigger(day_of_week="wed", hour=10, minute=0, timezone=TZ), id="hrtech_wednesday")
     # Пт 09:00 — горячая тема
-    scheduler.add_job(run_hot_topic_job, CronTrigger(day_of_week="fri", hour=9, minute=0, timezone=TZ), id="hot_topic_friday")
+    scheduler.add_job(run_hot_topic_job, CronTrigger(day_of_week="fri", hour=10, minute=0, timezone=TZ), id="hot_topic_friday")
     # Сб 11:00 — опрос
     scheduler.add_job(run_poll_job, CronTrigger(day_of_week="sat", hour=11, minute=0, timezone=TZ), id="poll_saturday")
     # Вс 18:00 — дайджест недели
     scheduler.add_job(run_weekly_digest_job, CronTrigger(day_of_week="sun", hour=18, minute=0, timezone=TZ), id="digest_sunday")
 
     logger.info("Scheduler запущен:")
-    logger.info("  Пн 09:00 — зарплаты")
-    logger.info("  Вт 09:00 — новость недели")
-    logger.info("  Ср 09:00 — HR tech")
-    logger.info("  Чт 09:00 — зарплаты")
-    logger.info("  Пт 09:00 — горячая тема")
+    logger.info("  Каждый день 09:00 — зарплаты (30 специализаций, бесконечный цикл)")
+    logger.info("  Вт 10:00 — новость недели")
+    logger.info("  Ср 10:00 — HR tech")
+    logger.info("  Пт 10:00 — горячая тема")
     logger.info("  Сб 11:00 — опрос")
     logger.info("  Вс 18:00 — дайджест недели")
     scheduler.start()
