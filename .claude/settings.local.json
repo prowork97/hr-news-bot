@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(TEST_MODE=true python main.py)",
+      "Bash(gh auth *)"
+    ]
+  }
+}

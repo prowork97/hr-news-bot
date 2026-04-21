@@ -17,7 +17,7 @@ def send_to_telegram(text: str, disable_preview: bool = True) -> bool:
             json={
                 "chat_id": TELEGRAM_CHANNEL_ID,
                 "text": text,
-                "parse_mode": "Markdown",
+                "parse_mode": "HTML",
                 "disable_web_page_preview": disable_preview,
             },
             timeout=15.0,

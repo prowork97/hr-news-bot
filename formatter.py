@@ -1,7 +1,7 @@
 from config import MAX_POST_LENGTH
 from datetime import datetime
 
-CHANNEL_SIGNATURE = "\n\n—\n✍️ [Ваш карманный HR](https://t.me/hpprow)"
+CHANNEL_SIGNATURE = "\n\n—\n✍️ <a href='https://t.me/hpprow'>Ваш карманный HR</a>"
 
 TREND_EMOJI = {"рост": "📈", "снижение": "📉", "стабильно": "➡️"}
 
@@ -24,7 +24,7 @@ def format_news_post(news: dict) -> str:
     impact_label = impact_map.get(news.get("impact", "").lower(), f"📌 {news.get('impact','')}")
     audience_map = {"hr": "HR-специалист", "рекрутер": "рекрутер", "руководитель": "руководитель", "бизнес": "владелец бизнеса"}
     audience_label = next((v for k, v in audience_map.items() if k in news.get("audience", "").lower()), news.get("audience", ""))
-    post = f"""🧠 *{news.get('title', '')}*
+    post = f"""🧠 <b>{news.get('title', '')}</b>
 
 {news.get('summary', '')}
 
@@ -33,7 +33,7 @@ def format_news_post(news: dict) -> str:
 Что делать: {news.get('hr_action', '')}
 
 Кому читать: {audience_label} · {impact_label}
-🔗 [Подробнее]({news.get('source_url', '')}){CHANNEL_SIGNATURE}
+🔗 <a href='{news.get('source_url', '')}'>Подробнее</a>{CHANNEL_SIGNATURE}
 
 #AI_в_HR #автоматизация #hr_инструменты"""
     return post[:MAX_POST_LENGTH]
@@ -47,25 +47,25 @@ def format_salary_post(data: dict) -> str:
     weekday = datetime.now().weekday()
     day_intro = DAY_CONTEXT.get(weekday, "")
     lines = [
-        f"📊 *Зарплаты в Узбекистане: {spec}*",
-        f"_{day_intro}_",
-        f"_Данные актуальны на {date}_",
+        f"📊 <b>Зарплаты в Узбекистане: {spec}</b>",
+        f"<i>{day_intro}</i>",
+        f"<i>Данные актуальны на {date}</i>",
         "",
         "Смотрим, сколько сейчас платят — и куда движется рынок.",
         "",
     ]
     for lvl in data.get("levels", []):
         trend_emoji = TREND_EMOJI.get(lvl.get("trend", "").lower(), "➡️")
-        lines.append(f"*{lvl.get('level', '')}*")
+        lines.append(f"<b>{lvl.get('level', '')}</b>")
         lines.append(f"{lvl.get('salary_range', '')} · медиана {lvl.get('median', '')}")
         lines.append(f"{trend_emoji} {lvl.get('trend', '')} — {lvl.get('comment', '')}")
         lines.append("")
     lines.append(f"💡 {insight}")
     lines.append("")
     if skills:
-        lines.append(f"🔥 Что поднимает цену: {' · '.join(f'`{s}`' for s in skills[:4])}")
+        lines.append(f"🔥 Что поднимает цену: {' · '.join(f'<code>{s}</code>' for s in skills[:4])}")
         lines.append("")
-    lines.append(f"_Источник: {source}_")
+    lines.append(f"<i>Источник: {source}</i>")
     lines.append(CHANNEL_SIGNATURE)
     lines.append("")
     lines.append(f"#зарплаты_узбекистан #рынок_труда #HR_аналитика")
