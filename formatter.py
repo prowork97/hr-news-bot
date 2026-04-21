@@ -1,7 +1,7 @@
 from config import MAX_POST_LENGTH
 from datetime import datetime
 
-CHANNEL_SIGNATURE = "\n\n—\n✍️ <a href='https://t.me/hpprow'>Ваш карманный HR</a>"
+CHANNEL_SIGNATURE = "\n—\n✍️ <a href=\"https://t.me/hpprow\">Ваш карманный HR</a>"
 
 TREND_EMOJI = {"рост": "📈", "снижение": "📉", "стабильно": "➡️"}
 
@@ -24,49 +24,55 @@ def format_news_post(news: dict) -> str:
     impact_label = impact_map.get(news.get("impact", "").lower(), f"📌 {news.get('impact','')}")
     audience_map = {"hr": "HR-специалист", "рекрутер": "рекрутер", "руководитель": "руководитель", "бизнес": "владелец бизнеса"}
     audience_label = next((v for k, v in audience_map.items() if k in news.get("audience", "").lower()), news.get("audience", ""))
-    post = f"""🧠 <b>{news.get('title', '')}</b>
-
-{news.get('summary', '')}
-
-Почему это важно прямо сейчас — {news.get('why_it_matters', '')}
-
-Что делать: {news.get('hr_action', '')}
-
-Кому читать: {audience_label} · {impact_label}
-🔗 <a href='{news.get('source_url', '')}'>Подробнее</a>{CHANNEL_SIGNATURE}
-
-#AI_в_HR #автоматизация #hr_инструменты"""
+    post = (
+        f"🧠 <b>{news.get('title', '')}</b>\n\n"
+        f"{news.get('summary', '')}\n\n"
+        f"Почему это важно прямо сейчас — {news.get('why_it_matters', '')}\n\n"
+        f"Что делать: {news.get('hr_action', '')}\n\n"
+        f"Кому читать: {audience_label} · {impact_label}\n"
+        f"🔗 <a href=\"{news.get('source_url', '')}\">Подробнее</a>"
+        f"{CHANNEL_SIGNATURE}\n\n"
+        f"#AI_в_HR #автоматизация #hr_инструменты"
+    )
     return post[:MAX_POST_LENGTH]
 
 def format_salary_post(data: dict) -> str:
     spec = data.get("specialization", "")
     date = data.get("date", datetime.now().strftime("%d.%m.%Y"))
     insight = data.get("market_insight", "")
-    skills = data.get("hot_skills", [])
-    source = data.get("source", "hh.uz")
+    hot_factor = data.get("hot_factor", "")
+    hashtag = data.get("_hashtag", "рынок_труда")
     weekday = datetime.now().weekday()
     day_intro = DAY_CONTEXT.get(weekday, "")
+
     lines = [
         f"📊 <b>Зарплаты в Узбекистане: {spec}</b>",
         f"<i>{day_intro}</i>",
-        f"<i>Данные актуальны на {date}</i>",
+        f"<i>Данные на {date} · источник: hh.uz, OLX.uz</i>",
         "",
-        "Смотрим, сколько сейчас платят — и куда движется рынок.",
+        "Смотрим, сколько платят — от входа до топа.",
         "",
     ]
-    for lvl in data.get("levels", []):
-        trend_emoji = TREND_EMOJI.get(lvl.get("trend", "").lower(), "➡️")
-        lines.append(f"<b>{lvl.get('level', '')}</b>")
-        lines.append(f"{lvl.get('salary_range', '')} · медиана {lvl.get('median', '')}")
-        lines.append(f"{trend_emoji} {lvl.get('trend', '')} — {lvl.get('comment', '')}")
+
+    for pos in data.get("positions", []):
+        trend_emoji = TREND_EMOJI.get(pos.get("trend", "").lower(), "➡️")
+        skills = " · ".join(pos.get("key_skills", [])[:3])
+        lines.append(f"<b>{pos.get('title', '')}</b>")
+        lines.append(f"💰 {pos.get('salary_range_sum', '')}")
+        if skills:
+            lines.append(f"🔥 {skills}")
+        lines.append(f"{trend_emoji} {pos.get('trend', '')} — {pos.get('comment', '')}")
         lines.append("")
-    lines.append(f"💡 {insight}")
-    lines.append("")
-    if skills:
-        lines.append(f"🔥 Что поднимает цену: {' · '.join(f'<code>{s}</code>' for s in skills[:4])}")
+
+    if insight:
+        lines.append(f"💡 {insight}")
         lines.append("")
-    lines.append(f"<i>Источник: {source}</i>")
+    if hot_factor:
+        lines.append(f"⚡ Что поднимает цену: {hot_factor}")
+        lines.append("")
+
     lines.append(CHANNEL_SIGNATURE)
     lines.append("")
-    lines.append(f"#зарплаты_узбекистан #рынок_труда #HR_аналитика")
+    lines.append(f"#зарплаты_узбекистан #{hashtag} #рынок_труда")
+
     return "\n".join(lines)[:MAX_POST_LENGTH]
