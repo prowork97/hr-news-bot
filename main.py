@@ -7,6 +7,7 @@ from salary_client import get_salary_analytics, get_today_specialization
 from deduplicator import is_duplicate
 from formatter import format_news_post, format_salary_post
 from publisher import send_to_telegram, send_poll
+from analyst import analyze_and_write
 from config import PERPLEXITY_API_KEY
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -54,7 +55,7 @@ def run_salary_job():
     if not data:
         logger.warning("Данные не получены")
         return
-    post = format_salary_post(data)
+    post = analyze_and_write(data, "salary") or format_salary_post(data)
     send_to_telegram(post)
 
 
@@ -87,17 +88,19 @@ def run_news_job():
     if is_duplicate(title, url):
         logger.info(f"Дубликат: {title[:50]}")
         return
-    post = (
-        f"🧠 <b>{title}</b>\n\n"
-        f"{data.get('what_happened', '')}\n\n"
-        f"<b>Почему это важно:</b>\n{data.get('why_big_deal', '')}\n\n"
-        f"<b>Узбекистан:</b>\n{data.get('uzbekistan_angle', '')}\n\n"
-        f"<b>Что делать на этой неделе:</b>\n{data.get('action_this_week', '')}\n\n"
-        f"💬 <i>{data.get('contrarian_take', '')}</i>\n\n"
-        f"🔗 <a href=\"{url}\">Читать полностью</a>"
-        f"{CHANNEL_SIGNATURE}\n\n"
-        f"#AI_в_HR #тренды #hr_инструменты"
-    )
+    post = analyze_and_write(data, "news")
+    if not post:
+        post = (
+            f"🧠 <b>{title}</b>\n\n"
+            f"{data.get('what_happened', '')}\n\n"
+            f"<b>Почему это важно:</b>\n{data.get('why_big_deal', '')}\n\n"
+            f"<b>Узбекистан:</b>\n{data.get('uzbekistan_angle', '')}\n\n"
+            f"<b>Что делать на этой неделе:</b>\n{data.get('action_this_week', '')}\n\n"
+            f"💬 <i>{data.get('contrarian_take', '')}</i>\n\n"
+            f"🔗 <a href=\"{url}\">Читать полностью</a>"
+            f"{CHANNEL_SIGNATURE}\n\n"
+            f"#AI_в_HR #тренды #hr_инструменты"
+        )
     if send_to_telegram(post):
         save_news(title, url)
 
@@ -127,17 +130,19 @@ def run_hrtech_job():
     if not data:
         logger.warning("Данные не получены")
         return
-    post = (
-        f"🛠 <b>{data.get('tool_name', '')} — {data.get('category', '')}</b>\n\n"
-        f"{data.get('what_it_does', '')}\n\n"
-        f"<b>Главная фича:</b> {data.get('key_feature', '')}\n\n"
-        f"<b>Как использовать:</b> {data.get('use_case', '')}\n\n"
-        f"<b>Цена:</b> {data.get('price_info', '')}\n\n"
-        f"<b>Узбекистан:</b> {data.get('uzbekistan_fit', '')}\n\n"
-        f"🔗 <a href=\"{data.get('tool_url', '')}\">Попробовать</a>"
-        f"{CHANNEL_SIGNATURE}\n\n"
-        f"#hrtech #инструменты #автоматизация_HR"
-    )
+    post = analyze_and_write(data, "hrtech")
+    if not post:
+        post = (
+            f"🛠 <b>{data.get('tool_name', '')} — {data.get('category', '')}</b>\n\n"
+            f"{data.get('what_it_does', '')}\n\n"
+            f"<b>Главная фича:</b> {data.get('key_feature', '')}\n\n"
+            f"<b>Как использовать:</b> {data.get('use_case', '')}\n\n"
+            f"<b>Цена:</b> {data.get('price_info', '')}\n\n"
+            f"<b>Узбекистан:</b> {data.get('uzbekistan_fit', '')}\n\n"
+            f"🔗 <a href=\"{data.get('tool_url', '')}\">Попробовать</a>"
+            f"{CHANNEL_SIGNATURE}\n\n"
+            f"#hrtech #инструменты #автоматизация_HR"
+        )
     send_to_telegram(post)
 
 
@@ -168,17 +173,19 @@ def run_hot_topic_job():
     if not data:
         logger.warning("Данные не получены")
         return
-    post = (
-        f"🔥 <b>{data.get('hook', '')}</b>\n\n"
-        f"{data.get('thesis', '')}\n\n"
-        f"<b>Аргумент за:</b> {data.get('argument_for', '')}\n\n"
-        f"<b>Аргумент против:</b> {data.get('argument_against', '')}\n\n"
-        f"<b>Реальность Узбекистана:</b>\n{data.get('uzbekistan_reality', '')}\n\n"
-        f"💬 {data.get('call_to_action', '')}\n\n"
-        f"Пишите в комментарии 👇"
-        f"{CHANNEL_SIGNATURE}\n\n"
-        f"#мнение #рынок_труда #HR_Узбекистан"
-    )
+    post = analyze_and_write(data, "hot_topic")
+    if not post:
+        post = (
+            f"🔥 <b>{data.get('hook', '')}</b>\n\n"
+            f"{data.get('thesis', '')}\n\n"
+            f"<b>Аргумент за:</b> {data.get('argument_for', '')}\n\n"
+            f"<b>Аргумент против:</b> {data.get('argument_against', '')}\n\n"
+            f"<b>Реальность Узбекистана:</b>\n{data.get('uzbekistan_reality', '')}\n\n"
+            f"💬 {data.get('call_to_action', '')}\n\n"
+            f"Пишите в комментарии 👇"
+            f"{CHANNEL_SIGNATURE}\n\n"
+            f"#мнение #рынок_труда #HR_Узбекистан"
+        )
     send_to_telegram(post)
 
 
@@ -239,31 +246,31 @@ def run_weekly_digest_job():
     if not data:
         logger.warning("Данные не получены")
         return
-    date_str = datetime.now().strftime("%d.%m.%Y")
-    insights = data.get("insights", [])
-
-    lines = [
-        f"📋 <b>{data.get('week_headline', '')}</b>",
-        f"<i>Итоги недели · {date_str}</i>",
-        "",
-        "<b>3 инсайта которые стоит знать:</b>",
-        "",
-    ]
-    numbers = ["1️⃣", "2️⃣", "3️⃣"]
-    for i, insight in enumerate(insights[:3]):
-        lines.append(f"{numbers[i]} <b>{insight.get('title', '')}</b>")
-        lines.append(insight.get("description", ""))
+    post = analyze_and_write(data, "digest")
+    if not post:
+        date_str = datetime.now().strftime("%d.%m.%Y")
+        insights = data.get("insights", [])
+        lines = [
+            f"📋 <b>{data.get('week_headline', '')}</b>",
+            f"<i>Итоги недели · {date_str}</i>",
+            "",
+            "<b>3 инсайта которые стоит знать:</b>",
+            "",
+        ]
+        numbers = ["1️⃣", "2️⃣", "3️⃣"]
+        for i, insight in enumerate(insights[:3]):
+            lines.append(f"{numbers[i]} <b>{insight.get('title', '')}</b>")
+            lines.append(insight.get("description", ""))
+            lines.append("")
+        lines.append("<b>На следующей неделе:</b>")
+        lines.append(data.get("next_week_preview", ""))
         lines.append("")
-
-    lines.append(f"<b>На следующей неделе:</b>")
-    lines.append(data.get("next_week_preview", ""))
-    lines.append("")
-    lines.append("Сохрани этот пост — пригодится в понедельник 👆")
-    lines.append(CHANNEL_SIGNATURE)
-    lines.append("")
-    lines.append("#итоги_недели #HR_аналитика #рынок_труда")
-
-    send_to_telegram("\n".join(lines))
+        lines.append("Сохрани этот пост — пригодится в понедельник 👆")
+        lines.append(CHANNEL_SIGNATURE)
+        lines.append("")
+        lines.append("#итоги_недели #HR_аналитика #рынок_труда")
+        post = "\n".join(lines)
+    send_to_telegram(post)
 
 
 if __name__ == "__main__":
