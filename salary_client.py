@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import date, datetime
 from config import PERPLEXITY_API_KEY
+from formatter import clean_markers_deep, extract_sources
 
 logger = logging.getLogger(__name__)
 
@@ -92,13 +93,16 @@ def get_salary_analytics(retries: int = 3):
                 timeout=30.0,
             )
             resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"].strip()
+            payload = resp.json()
+            content = payload["choices"][0]["message"]["content"].strip()
             if content.startswith("```"):
                 content = content.split("```")[1]
                 if content.startswith("json"):
                     content = content[4:]
             data = json.loads(content)
+            data = clean_markers_deep(data)            # убираем [N] из текстовых полей
             data["_hashtag"] = hashtag
+            data["_sources"] = extract_sources(payload)  # реальные URL источников
             return data
         except Exception as e:
             logger.warning(f"Попытка {attempt+1}: {e}")

@@ -5,7 +5,13 @@ from datetime import datetime
 from storage import init_db, save_news
 from salary_client import get_salary_analytics, get_today_specialization
 from deduplicator import is_duplicate
-from formatter import format_news_post, format_salary_post
+from formatter import (
+    format_news_post,
+    format_salary_post,
+    clean_markers_deep,
+    extract_sources,
+    append_sources,
+)
 from publisher import send_to_telegram, send_poll
 from analyst import analyze_and_write
 from config import PERPLEXITY_API_KEY
@@ -34,12 +40,17 @@ def _perplexity(prompt: str, max_tokens: int = 1500, temperature: float = 0.3) -
                 timeout=30.0,
             )
             resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"].strip()
+            payload = resp.json()
+            content = payload["choices"][0]["message"]["content"].strip()
             if content.startswith("```"):
                 content = content.split("```")[1]
                 if content.startswith("json"):
                     content = content[4:]
-            return json.loads(content)
+            data = json.loads(content)
+            data = clean_markers_deep(data)            # убираем [N] из текста
+            if isinstance(data, dict):
+                data["_sources"] = extract_sources(payload)  # реальные URL источников
+            return data
         except Exception as e:
             logger.warning(f"Perplexity попытка {attempt+1}: {e}")
     return None
@@ -56,6 +67,7 @@ def run_salary_job():
         logger.warning("Данные не получены")
         return
     post = analyze_and_write(data, "salary") or format_salary_post(data)
+    post = append_sources(post, data.get("_sources"))
     send_to_telegram(post)
 
 
@@ -101,6 +113,7 @@ def run_news_job():
             f"{CHANNEL_SIGNATURE}\n\n"
             f"#AI_в_HR #тренды #hr_инструменты"
         )
+    post = append_sources(post, data.get("_sources"))
     if send_to_telegram(post):
         save_news(title, url)
 
@@ -143,6 +156,7 @@ def run_hrtech_job():
             f"{CHANNEL_SIGNATURE}\n\n"
             f"#hrtech #инструменты #автоматизация_HR"
         )
+    post = append_sources(post, data.get("_sources"))
     send_to_telegram(post)
 
 
@@ -186,6 +200,7 @@ def run_hot_topic_job():
             f"{CHANNEL_SIGNATURE}\n\n"
             f"#мнение #рынок_труда #HR_Узбекистан"
         )
+    post = append_sources(post, data.get("_sources"))
     send_to_telegram(post)
 
 
@@ -270,6 +285,7 @@ def run_weekly_digest_job():
         lines.append("")
         lines.append("#итоги_недели #HR_аналитика #рынок_труда")
         post = "\n".join(lines)
+    post = append_sources(post, data.get("_sources"))
     send_to_telegram(post)
 
 

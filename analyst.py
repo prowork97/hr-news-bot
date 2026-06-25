@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 import anthropic
@@ -14,6 +15,9 @@ Telegram-канала «Ваш карманный HR».
 Ты всегда делаешь вывод который неочевиден.
 Ты говоришь что это значит для денег, найма или карьеры читателя.
 Пишешь на русском, коротко, с позицией.
+
+В тексте НЕ используй сноски и маркеры источников вида [1], [2], [3] —
+источники добавляются отдельным блоком автоматически.
 """
 
 PROMPTS = {
@@ -84,6 +88,8 @@ PROMPTS = {
 - Подпись в конце: — \n✍️ <a href="https://t.me/hpprow">Ваш карманный HR</a>""",
 }
 
+_CITATION_RE = re.compile(r"\s*\[\d+\](?:\s*\[\d+\])*")
+
 
 def analyze_and_write(raw_data: dict, post_type: str) -> str:
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -91,9 +97,15 @@ def analyze_and_write(raw_data: dict, post_type: str) -> str:
         logger.error("ANTHROPIC_API_KEY не задан")
         return ""
 
+    # не отдаём Claude внутренние служебные ключи (_sources, _hashtag и т.п.)
+    if isinstance(raw_data, dict):
+        clean_data = {k: v for k, v in raw_data.items() if not str(k).startswith("_")}
+    else:
+        clean_data = raw_data
+
     prompt_template = PROMPTS.get(post_type, PROMPTS["news"])
     user_prompt = prompt_template.format(
-        raw_data=json.dumps(raw_data, ensure_ascii=False, indent=2)
+        raw_data=json.dumps(clean_data, ensure_ascii=False, indent=2)
     )
 
     try:
@@ -105,6 +117,7 @@ def analyze_and_write(raw_data: dict, post_type: str) -> str:
             messages=[{"role": "user", "content": user_prompt}],
         )
         result = response.content[0].text.strip()
+        result = _CITATION_RE.sub("", result)  # страховка: убираем [N] если Claude всё же вставил
         logger.info(f"Claude написал пост ({post_type}), {len(result)} символов")
         return result
     except Exception as e:
