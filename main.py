@@ -9,8 +9,6 @@ from formatter import (
     format_news_post,
     format_salary_post,
     clean_markers_deep,
-    extract_sources,
-    append_sources,
 )
 from publisher import send_to_telegram, send_poll
 from analyst import analyze_and_write
@@ -48,8 +46,6 @@ def _perplexity(prompt: str, max_tokens: int = 1500, temperature: float = 0.3) -
                     content = content[4:]
             data = json.loads(content)
             data = clean_markers_deep(data)            # убираем [N] из текста
-            if isinstance(data, dict):
-                data["_sources"] = extract_sources(payload)  # реальные URL источников
             return data
         except Exception as e:
             logger.warning(f"Perplexity попытка {attempt+1}: {e}")
@@ -67,7 +63,6 @@ def run_salary_job():
         logger.warning("Данные не получены")
         return
     post = analyze_and_write(data, "salary") or format_salary_post(data)
-    post = append_sources(post, data.get("_sources"))
     send_to_telegram(post)
 
 
@@ -113,7 +108,6 @@ def run_news_job():
             f"{CHANNEL_SIGNATURE}\n\n"
             f"#AI_в_HR #тренды #hr_инструменты"
         )
-    post = append_sources(post, data.get("_sources"))
     if send_to_telegram(post):
         save_news(title, url)
 
@@ -156,7 +150,6 @@ def run_hrtech_job():
             f"{CHANNEL_SIGNATURE}\n\n"
             f"#hrtech #инструменты #автоматизация_HR"
         )
-    post = append_sources(post, data.get("_sources"))
     send_to_telegram(post)
 
 
@@ -200,7 +193,6 @@ def run_hot_topic_job():
             f"{CHANNEL_SIGNATURE}\n\n"
             f"#мнение #рынок_труда #HR_Узбекистан"
         )
-    post = append_sources(post, data.get("_sources"))
     send_to_telegram(post)
 
 
@@ -285,7 +277,6 @@ def run_weekly_digest_job():
         lines.append("")
         lines.append("#итоги_недели #HR_аналитика #рынок_труда")
         post = "\n".join(lines)
-    post = append_sources(post, data.get("_sources"))
     send_to_telegram(post)
 
 
