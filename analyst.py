@@ -165,3 +165,50 @@ def analyze_and_write(raw_data: dict, post_type: str) -> str:
     except Exception as e:
         logger.error(f"Claude API ошибка (post_type={post_type}): {e}")
         return ""
+
+
+# ── Узбекская адаптация поста ─────────────────────────────────────────────────
+
+UZ_SYSTEM_PROMPT = """
+Ты — редактор узбекоязычного Telegram-канала о рынке труда, зарплатах и HR в Узбекистане.
+Твоя задача — подготовить узбекскую версию готового русского поста для публикации.
+
+ПРАВИЛА:
+1. Пиши на современном узбекском языке ЛАТИНИЦЕЙ (o‘zbek lotin alifbosi), НЕ кириллицей.
+2. Не переводи дословно — адаптируй так, чтобы звучало естественно для узбекской аудитории.
+3. Сохраняй БЕЗ ИЗМЕНЕНИЙ все цифры, даты, диапазоны зарплат, названия компаний,
+   должности, города и выводы. Не добавляй новых фактов и не выдумывай источники.
+4. Сложные HR-термины поясняй простыми словами прямо в тексте, например:
+   «Ish haqi benchmarking — bozordagi o‘rtacha maoshlarni solishtirish».
+5. Короткие абзацы, понятный заголовок, стиль живой, не слишком официальный.
+6. Не смешивай русский и узбекский без необходимости.
+7. СОХРАНИ всю HTML-разметку и эмодзи из оригинала: теги <b>, <i>, ссылки
+   <a href="URL">...</a> и подпись канала в конце оставь как есть — URL внутри ссылок НЕ меняй.
+8. Верни ТОЛЬКО готовый узбекский пост. Без пояснений, без слова «черновик»,
+   без markdown, без блоков кода.
+"""
+
+
+def translate_to_uzbek(ru_post: str) -> str:
+    """Адаптирует готовый русский пост на узбекский (латиница) для второго канала."""
+    if not ru_post:
+        return ""
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        logger.error("ANTHROPIC_API_KEY не задан (перевод UZ)")
+        return ""
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2000,
+            system=UZ_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"Исходный русский пост:\n\n{ru_post}"}],
+        )
+        result = response.content[0].text.strip()
+        result = _clean_output(result)
+        logger.info(f"Узбекская версия готова, {len(result)} символов")
+        return result
+    except Exception as e:
+        logger.error(f"Claude API ошибка (перевод UZ): {e}")
+        return ""

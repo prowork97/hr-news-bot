@@ -1,3 +1,4 @@
+import os
 import httpx
 import json
 import logging
@@ -11,13 +12,25 @@ from formatter import (
     clean_markers_deep,
 )
 from publisher import send_to_telegram, send_poll
-from analyst import analyze_and_write
+from analyst import analyze_and_write, translate_to_uzbek
 from config import PERPLEXITY_API_KEY
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 CHANNEL_SIGNATURE = '\n—\n✍️ <a href="https://t.me/hpprow">Ваш карманный HR</a>'
+
+# Второй канал — узбекская версия. Если переменная не задана, зеркало просто спит.
+UZ_CHANNEL = os.environ.get("TELEGRAM_CHANNEL_ID_UZ", "")
+
+
+def _mirror_uz(post_ru: str):
+    """Адаптирует русский пост на узбекский и публикует во второй канал."""
+    if not UZ_CHANNEL or not post_ru:
+        return
+    post_uz = translate_to_uzbek(post_ru)
+    if post_uz:
+        send_to_telegram(post_uz, chat_id=UZ_CHANNEL)
 
 
 def _perplexity(prompt: str, max_tokens: int = 1500, temperature: float = 0.3) -> dict | list | None:
@@ -64,6 +77,7 @@ def run_salary_job():
         return
     post = analyze_and_write(data, "salary") or format_salary_post(data)
     send_to_telegram(post)
+    _mirror_uz(post)
 
 
 # ── Вторник 09:00 ─────────────────────────────────────────────────────────────
@@ -110,6 +124,7 @@ def run_news_job():
         )
     if send_to_telegram(post):
         save_news(title, url)
+        _mirror_uz(post)
 
 
 # ── Среда 09:00 ───────────────────────────────────────────────────────────────
@@ -151,6 +166,7 @@ def run_hrtech_job():
             f"#hrtech #инструменты #автоматизация_HR"
         )
     send_to_telegram(post)
+    _mirror_uz(post)
 
 
 # ── Пятница 09:00 ─────────────────────────────────────────────────────────────
@@ -194,6 +210,7 @@ def run_hot_topic_job():
             f"#мнение #рынок_труда #HR_Узбекистан"
         )
     send_to_telegram(post)
+    _mirror_uz(post)
 
 
 # ── Суббота 11:00 ─────────────────────────────────────────────────────────────
@@ -278,6 +295,7 @@ def run_weekly_digest_job():
         lines.append("#итоги_недели #HR_аналитика #рынок_труда")
         post = "\n".join(lines)
     send_to_telegram(post)
+    _mirror_uz(post)
 
 
 if __name__ == "__main__":

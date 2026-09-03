@@ -4,10 +4,11 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, TEST_MODE
 
 logger = logging.getLogger(__name__)
 
-def send_to_telegram(text: str, disable_preview: bool = True) -> bool:
+def send_to_telegram(text: str, disable_preview: bool = True, chat_id=None) -> bool:
+    target = chat_id or TELEGRAM_CHANNEL_ID
     if TEST_MODE:
         print("\n" + "="*50)
-        print("[TEST MODE] Пост:")
+        print(f"[TEST MODE] Пост в канал {target}:")
         print(text)
         print("="*50 + "\n")
         return True
@@ -15,7 +16,7 @@ def send_to_telegram(text: str, disable_preview: bool = True) -> bool:
         resp = httpx.post(
             f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
             json={
-                "chat_id": TELEGRAM_CHANNEL_ID,
+                "chat_id": target,
                 "text": text,
                 "parse_mode": "HTML",
                 "disable_web_page_preview": disable_preview,
@@ -25,7 +26,7 @@ def send_to_telegram(text: str, disable_preview: bool = True) -> bool:
         resp.raise_for_status()
         data = resp.json()
         if data.get("ok"):
-            logger.info("Отправлено в Telegram")
+            logger.info(f"Отправлено в Telegram (канал {target})")
             return True
         else:
             logger.error(f"Ошибка Telegram: {data}")
@@ -34,10 +35,11 @@ def send_to_telegram(text: str, disable_preview: bool = True) -> bool:
         logger.error(f"Ошибка отправки: {e}")
         return False
 
-def send_poll(question: str, options: list[str]) -> bool:
+def send_poll(question: str, options: list[str], chat_id=None) -> bool:
+    target = chat_id or TELEGRAM_CHANNEL_ID
     if TEST_MODE:
         print("\n" + "="*50)
-        print("[TEST MODE] Опрос:")
+        print(f"[TEST MODE] Опрос в канал {target}:")
         print(f"Вопрос: {question}")
         for i, opt in enumerate(options, 1):
             print(f"  {i}. {opt}")
@@ -47,7 +49,7 @@ def send_poll(question: str, options: list[str]) -> bool:
         resp = httpx.post(
             f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPoll",
             json={
-                "chat_id": TELEGRAM_CHANNEL_ID,
+                "chat_id": target,
                 "question": question,
                 "options": options,
                 "is_anonymous": False,
